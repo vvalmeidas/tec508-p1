@@ -4,8 +4,8 @@
 #include <errno.h>
 #include "csv.h"
 
-static const int NUM_IMAGES = 10074;
-static const int NUM_IMAGES_TRAINIG = 8092;
+static const int NUM_IMAGES_TESTING = 10074;
+static const int NUM_IMAGES_TRAINING = 8092;
 static const int NUM_PIXELS = 2304;
 
 
@@ -21,8 +21,9 @@ int main (int argc, char *argv[]) {
     char **varnames;
     int nvars = 0;
     char *line;
-    float **matrix;
-    float **matrix_training;
+    float **data_testing;
+    float **data_training;
+    float *labels;
 
     /* try to open file */
     if ((ifp = fopen("../data/fer2013.csv", "r")) == NULL) {
@@ -35,7 +36,6 @@ int main (int argc, char *argv[]) {
     /***
         read variable names from first row
     ***/
-
     if (csvgetline(ifp, ',', 0) == NULL) {
         printf("File is empty!");
         return -1;
@@ -59,33 +59,42 @@ int main (int argc, char *argv[]) {
         printf("%s ", varnames[i]);
     }
 
-    matrix = (float **) emalloc(NUM_IMAGES * sizeof(float));
-    matrix_training = (float **) emalloc(NUM_IMAGES_TRAINIG * sizeof(float));
+    data_testing = (float **) emalloc(NUM_IMAGES_TESTING * sizeof(float));
+    data_training = (float **) emalloc(NUM_IMAGES_TRAINING * sizeof(float));
 
-    int row = 0;
-    int row_training = 0;
+    int row_testing = 0; //data rows count
+    int row_training = 0; //training data rows count
+    char *label, *pixels, *usage, *pch; 
+    float temp; //temp value to be stored on the data
 
+    int cont = 0;
+
+    
+
+    /* iterate until the end of the file, reading every line */
     while(((line = csvgetline(ifp, ',', 0)) != NULL)) {
-        char *label = estrdup(csvfield(0));
+        label = estrdup(csvfield(0)); //gets the label
 
-        if((strcmp(label, "0") == 0 || strcmp(label, "2") == 0)) {
-            char *pixels = estrdup(csvfield(1));
-            char *usage = estrdup(csvfield(2));
-            char *pch;
 
-            matrix[row] = (float *) emalloc(NUM_PIXELS * sizeof(float));
+        if((strcmp(label, "0") == 0 || strcmp(label, "2") == 0)) { 
+            pixels = estrdup(csvfield(1)); //gets the pixel
+            usage = estrdup(csvfield(2)); //gets the usage
+            
             pch = strtok (pixels," ");
 
             if(strcmp(usage, "Training") == 0) {
-                matrix_training[row_training] = (float *) emalloc(NUM_PIXELS * sizeof(float));
+                data_training[row_training] = (float *) emalloc(NUM_PIXELS * sizeof(float));
+            } else {
+                cont++;
+                data_testing[row_testing] = (float *) emalloc(NUM_PIXELS * sizeof(float));
             }
 
             for(int c = 0; c < NUM_PIXELS; c++) {
-                float temp = strtof(pch, NULL);
-                matrix[row][c] = temp;
+                temp = strtof(pch, NULL)/255;
+                data_testing[row_testing][c] = temp;
                                 
                 if(strcmp(usage, "Training") == 0) {
-                    matrix_training[row_training][c] = temp;
+                    data_training[row_training][c] = temp;
                 }
 
                 pch = strtok (NULL, " ");
@@ -95,11 +104,13 @@ int main (int argc, char *argv[]) {
                 row_training++;
             }
 
-            row++;
+            row_testing++;
         }
     }
 
-    printf("%f %f %f %f\n", matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3]);
+    printf("Testing: %d\n", cont);
+
+    //printf("%f %f %f %f\n", data[0][0], data[0][1], data[0][2], data[0][3]);
 }
 
 void *emalloc (size_t n) {

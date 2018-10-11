@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -g -pg
+CFLAGS=-lm
 
 tec508-p1: main.o csv.o
 	$(CC) -o tec508-p1 main.o csv.o $(CFLAGS)

@@ -1,55 +1,71 @@
-/* Copyright (C) 1999 Lucent Technologies */
-/* Excerpted from 'The Practice of Programming' */
-/* by Brian W. Kernighan and Rob Pike */
+/**
+ * @file csv.c
+ * @brief Biblioteca para leitura de arquivos .csv.
+ * 
+ * Esse arquivo contém os métodos utilizados para leitura de 
+ * arquivos .csv. Os métodos são chamados pela função main()
+ * no arquivo principal. Retirado do livro 'The Practice of Programming'.
+ * 
+ * @author Brian W. Kernighan
+ * @author Rob Pike
+ * @date 12/10/2018
+ * 
+ * @copyright Copyright (C) 1999 Lucent Technologies
+ * 
+ */
 
-/***
+/* -- Includes -- */
 
-    Changes to the original:
-    Replaced "static char fieldsep[]" with a 'delim' arg to csvgetline
-    Added "compress" argument to csvgetline
-
-    This csv library is from the aforementioned text and continues to be the
-    reigning champion of csv libraries ever implemented.  It is simple, clean,
-    and highly useful in solving a common programming problem:  how to parse
-    myself, but I have no illusions that any csv library that I write would
-    even come close to the perfection that is Kernighan and Pike.
-    structured text.  One might accuse me of cheating by not writing this
-
-    I have, however, made two important changes.  The original version assumes
-    that the delimiter character is always a comma.  That would seem to be
-    perfectly reasonable given the fact that the name of the library itself
-    stipulates the fact that we are specifically interested in "comma separated
-    values".  I usually find tab-delimited datasets easier to manage, and they
-    are in any case equally as common as csv datasets.  So, I have refactored
-    the delimiter character to be an argument to the csvgetline function.
-
-    The second change is to add a "compress" argument which if 1 will treat
-    consecutive delimiters as one character.  This is most useful in parsing
-    commands as it allows us to ignore multiple simultaneous spaces.
-
-***/
-
+/** Inclusão da biblioteca stdio **/
 #include <stdio.h>
+
+/** Inclusão da biblioteca string **/
 #include <string.h>
+
+/** Inclusão da biblioteca stdlib **/
 #include <stdlib.h>
+
+/** Inclusão da biblioteca assert **/
 #include <assert.h>
 
 #include "csv.h"
 
-enum { NOMEM = -2 };          /* out of memory signal */
+/* Indicação de fim de memória */
+enum { NOMEM = -2 };          
 
-static char *line    = NULL;  /* input chars */
-static char *sline   = NULL;  /* line copy used by split */
-static int  maxline  = 0;     /* size of line[] and sline[] */
-static char **field  = NULL;  /* field pointers */
-static int  maxfield = 0;     /* size of field[] */
-static int  nfield   = 0;     /* number of fields in field[] */
+/* String de linhas lidas da entrada */
+static char *line    = NULL;  
 
+/* Cópia da linha */
+static char *sline   = NULL;  
+
+/* Tamanho da linha */
+static int  maxline  = 0;   
+
+/* Pointeiro para campos */
+static char **field  = NULL; 
+
+/* Tamanho dos campos */
+static int  maxfield = 0;   
+
+/* Número de campos */
+static int  nfield   = 0;   
+
+/** protótipos de funções **/
 static char *advquoted(char *p, char delim);
 static int split(char delim, int compress);
 
 
 /* endofline: check for and consume \r, \n, \r\n, or EOF */
+/**
+ * @brief Verifica se o fim do arquivo foi atingido.
+ * 
+ * Verifica se o fim do arquivo foi atingido.
+ * 
+ * @param fin ponteiro para o arquivo
+ * @param c caractere
+ * @return int 1, se o fim do arquivo foi atingido; 0, caso contrário
+ */
 static int endofline(FILE *fin, int c)
 {
 	int eol;
@@ -58,15 +74,22 @@ static int endofline(FILE *fin, int c)
 	if (c == '\r') {
 		c = getc(fin);
 		if (c != '\n' && c != EOF)
-			ungetc(c, fin);	/* read too far; put c back */
+			ungetc(c, fin);
 	}
 	return eol;
 }
 
 /* reset: set variables back to starting values */
+/**
+ * @brief Reseta a leitura do arquivo.
+ * 
+ * Reseta a leitura do arquivo, ajustando as 
+ * variáveis com seus valores iniciais.
+ * 
+ */
 static void reset(void)
 {
-	free(line);	/* free(NULL) permitted by ANSI C */
+	free(line);
 	free(sline);
 	free(field);
 	line = NULL;
@@ -75,26 +98,34 @@ static void reset(void)
 	maxline = maxfield = nfield = 0;
 }
 
-/* csvgetline:  get one line, grow as needed */
-/* sample input: "LU",86.25,"11/4/1998","2:19PM",+4.0625 */
+/**
+ * @brief Obtém uma linha do arquivo.
+ * 
+ * Obtém uma linha do arquivo.
+ * 
+ * @param fin ponteiro para o arquivo
+ * @param delim delimitador de linha
+ * @param compress 
+ * @return char* string contendo a linha lida
+ */
 char *csvgetline(FILE *fin, char delim, int compress)
 {
 	int i, c;
 	char *newl, *news;
 
-	if (line == NULL) {			/* allocate on first call */
+	if (line == NULL) {			/* realiza alocaççoes na primeira leitura */
 		maxline = maxfield = 1;
 		line = (char *) malloc(maxline);
 		sline = (char *) malloc(maxline);
 		field = (char **) malloc(maxfield*sizeof(field[0]));
 		if (line == NULL || sline == NULL || field == NULL) {
 			reset();
-			return NULL;		/* out of memory */
+			return NULL;		/* estouro de memória */
 		}
 	}
 	for (i=0; (c=getc(fin))!=EOF && !endofline(fin,c); i++) {
-		if (i >= maxline-1) {	/* grow line */
-			maxline *= 2;		/* double current size */
+		if (i >= maxline-1) {	/* cresce a linha */
+			maxline *= 2;		/* dobra o tamanho atual */
 			newl = (char *) realloc(line, maxline);
 			if (newl == NULL) {
 				reset();
@@ -115,17 +146,25 @@ char *csvgetline(FILE *fin, char delim, int compress)
 	line[i] = '\0';
 	if (split(delim, compress) == NOMEM) {
 		reset();
-		return NULL;			/* out of memory */
+		return NULL;			/* estouro de memória */
 	}
 	return (c == EOF && i == 0) ? NULL : line;
 }
 
-/* split: split line into fields */
+/**
+ * @brief Separa a linha em campos.
+ * 
+ * Separa a linha em campos.
+ * 
+ * @param delim delimitador de campos
+ * @param compress 
+ * @return int número de campos
+ */
 static int split(char delim, int compress)
 {
 	char *p, **newf;
-	char *sepp; /* pointer to temporary separator character */
-	int sepc;   /* temporary separator character */
+	char *sepp; /* ponteiro para caractere separador temporário */
+	int sepc;   /* caractere separador temporário */
 
 	nfield = 0;
 	if (line[0] == '\0')
@@ -135,25 +174,25 @@ static int split(char delim, int compress)
 
 	do {
 		if (nfield >= maxfield) {
-			maxfield *= 2;			/* double current size */
+			maxfield *= 2;			/* dobra o tamanho atual */
 			newf = (char **) realloc(field,
 						maxfield * sizeof(field[0]));
 			if (newf == NULL)
 				return NOMEM;
 			field = newf;
 		}
-		/* compress subsequent delimiter characters */
+		/* comprime os caracteres delimitadores subsequentes */
 		if (compress) {
 		    while (*p != '\0' && *p == delim) {
 		        p++;
 		    }
 		}
 		if (*p == '"')
-			sepp = advquoted(++p, delim);	/* skip initial quote */
+			sepp = advquoted(++p, delim);	/* pula o inicial */
 		else
 			sepp = p + strcspn(p, &delim);
 		sepc = sepp[0];
-		sepp[0] = '\0';				/* terminate field */
+		sepp[0] = '\0';				/* termina o campo */
 		field[nfield++] = p;
 		p = sepp + 1;
 	} while (sepc == (int) delim);
@@ -161,14 +200,20 @@ static int split(char delim, int compress)
 	return nfield;
 }
 
-/* advquoted: quoted field; return pointer to next separator */
+/**
+ * @brief Retorna ponteiro para o próximo separador.
+ * 
+ * @param p ponteiro para liha
+ * @param delim delimitador
+ * @return char* string do próximo separador
+ */
 static char *advquoted(char *p, char delim)
 {
 	int i, j;
 
 	for (i = j = 0; p[j] != '\0'; i++, j++) {
 		if (p[j] == '"' && p[++j] != '"') {
-			/* copy up to next separator or \0 */
+			/* copia o próximo separador */
 			int k = strcspn(p+j, &delim);
 			memmove(p+i, p+j, k);
 			i += k;
@@ -181,7 +226,14 @@ static char *advquoted(char *p, char delim)
 	return p + j;
 }
 
-/* csvfield:  return pointer to n-th field */
+/**
+ * @brief Retorna ponteiro para o valor do n-ésimo campo da linha.
+ * 
+ * Retorna ponteiro para o valor do n-ésimo campo da linha.
+ * 
+ * @param n index do campo
+ * @return char* string do campo
+ */
 char *csvfield(int n)
 {
 	if (n < 0 || n >= nfield)
@@ -189,7 +241,13 @@ char *csvfield(int n)
 	return field[n];
 }
 
-/* csvnfield:  return number of fields */
+/**
+ * @brief Obtém o número de campos do arquivo.
+ * 
+ * Obtém o número de campos do arquivo.
+ * 
+ * @return int número de campos do arquivo
+ */
 int csvnfield(void)
 {
 	return nfield;

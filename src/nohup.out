@@ -1,0 +1,49 @@
+make: 'tec508-p1' is up to date.
+File is open!
+
+TP: 5425   TN: 0    FP: 4625   FN: 0
+
+0.539801     0.539801      1.000000      0.701131
+
+
+
+
+
+
+
+
+CORRETOS: 590
+
+TP: 338   TN: 252    FP: 244   FN: 315
+
+0.513490     0.580756      0.517611      0.547368
+gcc -lm   -c -o main.o main.c
+main.c: In function ‘main’:
+main.c:69:68: warning: passing argument 3 of ‘cost_function’ from incompatible pointer type [-Wincompatible-pointer-types]
+         printf("Custo: %f\n", cost_function(data_training, weight, labels_training, NUM_IMAGES_TRAINING, NUM_PIXELS));
+                                                                    ^~~~~~~~~~~~~~~
+In file included from main.c:9:0:
+operations.h:8:14: note: expected ‘float *’ but argument is of type ‘int *’
+ extern float cost_function(float **data, float *weight, float *labels, int num_images, float num_pixels);
+              ^~~~~~~~~~~~~
+gcc -lm   -c -o operations.o operations.c
+gcc -o tec508-p1 main.o csv.o allocation_manager.o file_manager.o operations.o util.o -lm
+File is open!
+
+TP: 5425   TN: 0    FP: 4625   FN: 0
+
+0.539801     0.539801      1.000000      0.701131
+Custo: inf
+
+
+
+
+
+
+
+
+CORRETOS: 575
+
+TP: 320   TN: 255    FP: 241   FN: 333
+
+0.500435     0.570410      0.490046      0.527183
